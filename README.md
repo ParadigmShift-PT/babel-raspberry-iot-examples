@@ -29,6 +29,11 @@ walks one demo end-to-end so the rest become easy to read.
 - A **Raspberry Pi** (4 or 5) to run — the demos drive real GPIO/I²C/UART hardware.
 - Depending on the demo: Grove devices on a Pi4J-compatible GrovePi HAT, a
   Waveshare SX126X LoRa HAT, or an Ember (EZSP) ZigBee USB dongle.
+- **OS package** (Raspbian / Raspberry Pi OS): `sudo apt install i2c-tools`.
+  The I²C demos depend on `babel-iot-control-protocols`, whose `I2CScanner`
+  shells out to `i2cdetect` to enumerate connected devices. Without the
+  package every I²C probe fails with `Cannot run program "i2cdetect":
+  error=2, No such file or directory`.
 
 All Maven dependencies resolve from the **ParadigmShift Maven repository**
 (`https://maven.paradigmshift.pt/releases`, read-open — no credentials needed),
