@@ -473,8 +473,10 @@ This repository contains two bodies of work:
 - The **IoT device-control demos** (package `pt.unl.fct.di.tardis.babel.iot.demos`)
   are based on work originally developed at **NOVA School of Science and
   Technology (NOVA FCT)** as part of the **TaRDIS** European project
-  ([project page](https://codelab.fct.unl.pt/di/research/tardis/wp6/iot/applications/simple-iot-examples))
-  and are now maintained by ParadigmShift.
+  ([project page](https://codelab.fct.unl.pt/di/research/tardis/wp6/iot/applications/simple-iot-examples)).
+  ParadigmShift's fork is provided and evolved independently of the original
+  work — releases, roadmap, and support follow the StoneFlux project, not the
+  upstream NOVA FCT / TaRDIS effort.
 - The **LoRa and ZigBee radio demos** (package `pt.paradigmshift.iot.demos`) were
   developed by **ParadigmShift, Lda.**
 
