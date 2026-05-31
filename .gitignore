@@ -35,3 +35,6 @@ replay_pid*
 .classpath
 .factorypath
 .project
+
+# Claude Code per-project guidance (local, not committed)
+CLAUDE.md

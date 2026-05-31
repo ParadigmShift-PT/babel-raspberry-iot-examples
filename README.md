@@ -25,15 +25,12 @@ walks one demo end-to-end so the rest become easy to read.
 
 ## Requirements
 
-- **Java 21** and Maven 3.6+ to build (the ZigBee stack pulls the Java 21 floor).
-- A **Raspberry Pi** (4 or 5) to run — the demos drive real GPIO/I²C/UART hardware.
+- **Java 17** (JDK to build, JRE/JDK to run) and Maven 3.6+.
+- A **Raspberry Pi** (4 or 5) running **Raspberry Pi OS** (Bookworm) to *run* — the
+  demos drive real GPIO/I²C/UART hardware. They compile anywhere but will not run
+  off a Pi.
 - Depending on the demo: Grove devices on a Pi4J-compatible GrovePi HAT, a
   Waveshare SX126X LoRa HAT, or an Ember (EZSP) ZigBee USB dongle.
-- **OS package** (Raspbian / Raspberry Pi OS): `sudo apt install i2c-tools`.
-  The I²C demos depend on `babel-iot-control-protocols`, whose `I2CScanner`
-  shells out to `i2cdetect` to enumerate connected devices. Without the
-  package every I²C probe fails with `Cannot run program "i2cdetect":
-  error=2, No such file or directory`.
 
 All Maven dependencies resolve from the **ParadigmShift Maven repository**
 (`https://maven.paradigmshift.pt/releases`, read-open — no credentials needed),
@@ -41,16 +38,91 @@ already configured in `pom.xml`.
 
 ---
 
-## Quickstart
+## Raspberry Pi OS setup (do this once, before running anything)
+
+The demos talk to real buses, so the Pi has to be told to expose them and your
+user has to be allowed to use them. Skipping a step here is the most common
+reason a demo aborts on startup.
+
+### 1. Install Java and the I²C tools
 
 ```bash
-mvn package
+sudo apt update
+sudo apt install -y openjdk-17-jre-headless i2c-tools
+```
+
+`i2c-tools` is mandatory for every I²C demo: `babel-iot-control-protocols`'
+`I2CScanner` shells out to `i2cdetect` to enumerate devices. Without it each
+probe fails with `Cannot run program "i2cdetect": error=2, No such file or
+directory`.
+
+### 2. Enable the interfaces the demos use
+
+Run `sudo raspi-config` → **Interface Options**, or use the non-interactive form:
+
+```bash
+sudo raspi-config nonint do_i2c 0        # enable I²C  (Grove LCD / matrix / gesture / accel)
+sudo raspi-config nonint do_serial_hw 0  # enable the serial HARDWARE port (LoRa HAT UART)
+sudo raspi-config nonint do_serial_cons 1   # DISABLE the serial login console (frees /dev/ttyAMA0)
+```
+
+- **I²C demos** need I²C on. After a reboot, `i2cdetect -y 1` should list your
+  Grove devices.
+- **LoRa demos** need the PL011 UART on the GPIO header free. The serial *console*
+  must be **off** or it will hold `/dev/ttyAMA0` open and the HAT won't respond.
+  On Pi 4/5 you may also want `dtoverlay=disable-bt` in `/boot/firmware/config.txt`
+  so the PL011 (not the mini-UART) is wired to the header.
+- **ZigBee demos** use a USB dongle (CDC-ACM), not the GPIO header — no interface
+  toggle needed, just the permissions in step 3.
+
+Reboot after changing interfaces: `sudo reboot`.
+
+### 3. Grant your user access to the buses (avoid running as root)
+
+```bash
+sudo usermod -aG i2c,gpio,dialout "$USER"   # I²C bus, GPIO lines, serial/USB ports
+# log out and back in (or reboot) for the new groups to take effect
+```
+
+`dialout` covers both the LoRa HAT UART (`/dev/ttyAMA0`) and the ZigBee USB
+dongle (`/dev/ttyUSB*` / `/dev/ttyACM*`). If you still hit
+`GpioDException: Device or resource busy` on a Grove digital demo, confirm no
+other process (or a second copy of a demo) is holding the GPIO peripheral —
+only **one** of these JVMs may run against a Pi at a time.
+
+### 4. Wire the hardware to the expected ports
+
+| Hardware | Connection | Default the demos assume |
+|---|---|---|
+| Grove I²C devices (LCD, LED matrix, gesture, accelerometer) | GrovePi I²C port | bus `/dev/i2c-1`; fixed per-device I²C addresses |
+| Grove chainable RGB LED | GrovePi digital port | GPIO line `led.line` = **26** (`paradigmshift.config`) |
+| Grove rotary encoder / digital devices | GrovePi digital port | line set per demo |
+| Waveshare SX126X LoRa HAT | seated on the 40-pin header (UART + M0/M1 pins) | UART `lora.device` = `/dev/ttyAMA0`, address `lora.own.addr` = `0x0001` |
+| Ember EZSP ZigBee dongle | any USB port | `zigbee.serial.port` empty → auto-discovered |
+
+> ⚠️ The chainable-RGB demos default to GPIO line **26**. If you ever run a LoRa
+> demo and a chainable-LED demo on the same Pi, move the LED off `D26`: the
+> chainable LED's data pin is `line + 1` = BCM 27, which is the LoRa HAT's M1
+> mode pin (the HAT also owns BCM 22 = M0) — the clash shows up as a Pi4J
+> `Device or resource busy`. Set `led.line` to a free port (the StoneFlux
+> gateway uses `D24`).
+
+---
+
+## Quickstart
+
+Once the OS setup above is done:
+
+```bash
+mvn package                                                   # build the fat JAR (on a dev box or the Pi)
 java -jar target/babel-raspberry-iot-examples.jar             # prints the demo list
 java -jar target/babel-raspberry-iot-examples.jar Lcd         # run a specific demo
 ```
 
-Each demo takes a single string argument naming it. With no argument the
-program prints every available demo and exits.
+You can build on any machine and copy `target/babel-raspberry-iot-examples.jar`
+to the Pi, or download it from the project's GitHub Release (see
+[Distribution](#distribution)). Each demo takes a single string argument naming
+it; with no argument the program prints every available demo and exits.
 
 ---
 
@@ -118,17 +190,17 @@ What's already brought in via the POM, and which library it comes from:
 
 | Library | What it gives you | Pulled by |
 |---|---|---|
-| `pt.paradigmshift.iot:babel-iot-control-protocols:1.2.0` | The four control protocols + all output/input requests | direct |
-| `pt.paradigmshift.iot:babel-iot-control-api:1.1.0` | `DeviceHandle`, `DeviceType`, `Threshold`, `RegisterIoTDeviceRequest/Reply`, request base classes | transitive |
+| `pt.paradigmshift.iot:babel-iot-control-protocols:1.3.0` | The four control protocols + all output/input requests | direct |
+| `pt.paradigmshift.iot:babel-iot-control-api:1.2.0` | `DeviceHandle`, `DeviceType`, `Threshold`, `RegisterIoTDeviceRequest/Reply`, request base classes | transitive |
 | `pt.paradigmshift.iot:pi4j-iot-device-library:1.0.0` | Grove drivers (`GroveLcd`, `GroveChainableRGB`, `GroveLedMatrix`, `GroveGestureDetector`, …) + `LedMatrixUtils` | transitive |
 | `pt.paradigmshift.iot:pi4j-components:0.0.7` | Generic Pi4J component catalogue (LEDs, buttons, ADCs, displays, …) | transitive |
 | `pt.paradigmshift.iot:pi4j-shared-context:0.1.0` | `SharedPi4J.get()` — the one Pi4J Context | direct (also transitive) |
-| `pt.paradigmshift.babel:babel-radio-api:0.2.0` | `RadioAddress`, `(Send|Broadcast)RadioPacketRequest`, `RadioPacketReceivedNotification`, `RadioSendFailedNotification` | direct |
-| `pt.paradigmshift.babel:babel-lora-protocol:0.3.0` | `LoRaProtocol` (id 1100), `LoRaAddress`, `LoRaPacketReceivedNotification` (adds RSSI/prevHop) | direct |
-| `pt.paradigmshift.babel:babel-zigbee-protocol:0.3.0` | `ZigBeeProtocol` (id 1200), `ZigBeeAddress`, `ZigBeePacketReceivedNotification` (adds packetId/val), `ZigBeeHeartbeatNotification` | direct |
+| `pt.paradigmshift.babel:babel-radio-api:0.3.0` | `RadioAddress`, `(Send|Broadcast)RadioPacketRequest`, `RadioPacketReceivedNotification`, `RadioSendFailedNotification` | direct |
+| `pt.paradigmshift.babel:babel-lora-protocol:0.4.0` | `LoRaProtocol` (id 1100), `LoRaAddress`, `LoRaPacketReceivedNotification` (adds RSSI/prevHop) | direct |
+| `pt.paradigmshift.babel:babel-zigbee-protocol:0.5.0` | `ZigBeeProtocol` (id 1200), `ZigBeeAddress`, `ZigBeePacketReceivedNotification` (adds packetId/val), `ZigBeeHeartbeatNotification` | direct |
 | `pt.paradigmshift.iot:babel-lora:0.2.2` | Standalone `LoRaHAT` driver (UART + M0/M1 GPIO) | transitive |
-| `pt.paradigmshift.iot:babel-zigbee:0.1.0` | Standalone `ZigBeeCoordinator` (Ember EZSP via USB serial) | transitive |
-| `pt.paradigmshift.babel:babel-core:1.0.0` | Babel itself — `GenericProtocol`, `Babel`, channels, timers | transitive |
+| `pt.paradigmshift.iot:babel-zigbee:0.2.0` | Standalone `ZigBeeCoordinator` (Ember EZSP via USB serial) | transitive |
+| `pt.paradigmshift.babel:babel-core:1.0.1` | Babel itself — `GenericProtocol`, `Babel`, channels, timers | transitive |
 
 ---
 
@@ -459,10 +531,21 @@ radio extra, that change belongs upstream in `babel-iot-control-protocols` /
 
 This repository is a set of **demo applications, not a reusable artifact**, so
 it is deliberately *not* deployed to the ParadigmShift Maven repository the way
-the libraries are. CI builds the executable fat JAR and attaches it as a
-workflow artifact; how we publish the demos for download (e.g. the ParadigmShift
-website or GitHub Releases) is still to be decided. To get a build today,
-either run `mvn package` locally or grab the JAR from the latest CI run.
+the libraries are — that would list it among the real libraries on the website.
+
+**The distribution channel is GitHub Releases.** `.github/workflows/ci.yml`:
+
+- on every push / PR, builds the fat JAR and uploads it as a **workflow
+  artifact** (handy for grabbing a dev build);
+- on a **`vX.Y.Z` tag**, additionally attaches
+  `babel-raspberry-iot-examples.jar` to a **GitHub Release** with auto-generated
+  notes.
+
+To cut a release: `git tag v0.1.0 && git push origin v0.1.0`. To run it on a Pi,
+download the JAR from the release and `java -jar babel-raspberry-iot-examples.jar <demo>`.
+
+Do **not** add `mvn deploy`/`mvn install` or a `distributionManagement` block —
+see the comment at the top of `ci.yml`.
 
 ---
 

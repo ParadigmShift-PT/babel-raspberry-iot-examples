@@ -1,14 +1,15 @@
 name: CI
 
-# These are runnable demo applications, not a published library. CI only
-# builds the executable fat JAR and attaches it as a workflow artifact.
+# These are runnable demo applications, not a published library. CI builds the
+# executable fat JAR and, on a version tag, publishes it as a GitHub Release.
 #
 # DO NOT add an `mvn deploy` step or any `mvn install` step to this workflow.
 # Publishing this repository to the ParadigmShift Maven repository would make
 # it appear in the libraries section of the ParadigmShift website alongside
-# the actual reusable artifacts — which is explicitly NOT what these demos
-# are. Distribution will be handled separately (likely via the ParadigmShift
-# website / GitHub Releases) once we settle on the channel.
+# the actual reusable artifacts — which is explicitly NOT what these demos are.
+# Distribution is the fat JAR attached to the GitHub Release created below (a
+# matching "Demos / Downloads" link on the ParadigmShift website can point at
+# the latest release asset).
 
 on:
   push:
@@ -20,22 +21,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create the Release on tag pushes
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
 
       - name: Build executable fat JAR
         run: mvn package --no-transfer-progress
 
-      - name: Upload demo JAR
+      # Always available for branch/PR builds: the JAR as a workflow artifact.
+      - name: Upload demo JAR (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: babel-raspberry-iot-examples
           path: target/babel-raspberry-iot-examples.jar
           if-no-files-found: error
+
+      # On a v*.*.* tag only: publish the fat JAR as a GitHub Release asset.
+      # This is the demo's distribution channel — NOT the Maven repository.
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/babel-raspberry-iot-examples.jar
+          fail_on_unmatched_files: true
+          generate_release_notes: true

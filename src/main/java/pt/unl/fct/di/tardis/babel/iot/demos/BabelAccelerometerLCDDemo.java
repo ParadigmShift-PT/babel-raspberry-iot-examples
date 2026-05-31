@@ -131,13 +131,13 @@ public class BabelAccelerometerLCDDemo
                            rep.isSuccessful());
         if (rep.isSuccessful()) {
             switch (rep.getInputType()) {
-            case InputType.Accelerometer.ACCELERATION_DATA:
+            case ACCELERATION_DATA:
                 AccelData ad = (AccelData)rep.getMeasurement();
                 System.out.println(ad);
                 sendRequest(new ShowTextRequest(lcdDevice, ad.toString()),
                             I2COutputControlProtocol.PROTOCOL_ID);
                 break;
-            case InputType.Accelerometer.ACCELERATION_SIMPLE:
+            case ACCELERATION_SIMPLE:
                 float[] as = (float[])rep.getMeasurement();
                 String as_str = Arrays.toString(as);
                 System.out.println(as_str);
@@ -146,7 +146,7 @@ public class BabelAccelerometerLCDDemo
                                 as_str), // this might not display well but alas
                             I2COutputControlProtocol.PROTOCOL_ID);
                 break;
-            case InputType.Accelerometer.XYZ:
+            case XYZ:
                 int[] xyz = (int[])rep.getMeasurement();
                 String xyz_str = Arrays.toString(xyz);
                 System.out.println(xyz_str);
