@@ -87,6 +87,9 @@ jobs:
       - name: Generate Javadoc
         run: mvn --no-transfer-progress javadoc:javadoc   # → target/site/apidocs
 
+      # Pages must be enabled ONCE in repo Settings → Pages → Build and deployment
+      # → Source: "GitHub Actions". (The default GITHUB_TOKEN can't create the site
+      # via the API, so auto-enablement doesn't work here.)
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
