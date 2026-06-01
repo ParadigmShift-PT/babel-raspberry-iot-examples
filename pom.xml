@@ -85,6 +85,25 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.12.1</version>
 			</plugin>
+
+			<!-- Javadoc generation. Pinned + doclint disabled so a stray/missing
+			     tag can't fail the build. Run by CI (`mvn javadoc:javadoc`, output
+			     in target/site/apidocs) and published to GitHub Pages — see
+			     .github/workflows/ci.yml. No attach execution: these demos are not
+			     a Maven artifact, so we don't bundle a -javadoc.jar at package time. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.6.3</version>
+				<configuration>
+					<doclint>none</doclint>
+					<quiet>true</quiet>
+					<windowtitle>ParadigmShift Babel IoT Examples API</windowtitle>
+					<doctitle>ParadigmShift Babel IoT Examples ${project.version} API</doctitle>
+					<bottom>Copyright &amp;copy; 2026 ParadigmShift, Lda. See LICENSE for terms.</bottom>
+				</configuration>
+			</plugin>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>

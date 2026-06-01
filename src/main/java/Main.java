@@ -15,10 +15,37 @@ import pt.unl.fct.di.tardis.babel.iot.demos.BabelSimpleChainableLedsRGBDemo;
 import pt.paradigmshift.iot.demos.BabelLoRaDemo;
 import pt.paradigmshift.iot.demos.BabelZigBeeDemo;
 
+/**
+ * Entry point and demo launcher for the whole project. This is the fat JAR's
+ * main class.
+ *
+ * <p>The project ships many small demos, but a Raspberry Pi can only run one at
+ * a time (there is a single Babel runtime per JVM, a single Pi4J {@code Context},
+ * and the buses are claimed exclusively). So {@code Main} takes exactly one
+ * command-line argument — the name of the demo to run — looks it up, and hands
+ * off to it.
+ *
+ * <p>Run it with the demo name, for example:
+ * <pre>{@code java -jar babel-raspberry-iot-examples.jar Lcd}</pre>
+ * Invoked with no argument (or the wrong number of arguments), it prints the
+ * list of available demos and exits. Each {@code case} below maps one of those
+ * names to the {@link BabelDemo} that implements it.
+ *
+ * <p>Each demo knows how to bootstrap its own Babel runtime; {@code Main} just
+ * constructs the chosen one and calls {@link BabelDemo#execute()}.
+ */
 public class Main {
 
+    /**
+     * Parses the single demo-name argument, constructs the matching
+     * {@link BabelDemo}, and runs it via {@link BabelDemo#execute()}.
+     *
+     * @param args expects exactly one element: the demo name (see the usage list
+     *             printed when the count is wrong)
+     */
     public static void main(String args[]) {
 
+        // No demo name (or too many args): print the catalogue of demos and exit.
         if (args.length != 1) {
             System.err.println("This is a simple demo to control different IoT "
                                + "and operations in Babel");
@@ -81,6 +108,10 @@ public class Main {
 
         BabelDemo demo = null;
 
+        // Map the demo name to its implementation. Grove I²C/digital demos and the
+        // ParadigmShift radio demos all implement BabelDemo. The radio demos take a
+        // boolean: true = sender, false = receiver, so loraSend/loraReceive (and the
+        // ZigBee pair) reuse one class with opposite roles.
         switch (args[0]) {
         case "LedMatrix":
             demo = new BabelMatrixDemo();
@@ -134,14 +165,18 @@ public class Main {
             demo = new BabelZigBeeDemo(false);
             break;
         default:
+            // Name didn't match any case above.
             System.err.println("Unknown test '" + args[0] + "'");
             System.exit(1);
             break;
         }
 
         try {
+            // Hand off to the chosen demo: it builds and starts its own Babel
+            // runtime and never returns under normal operation (the event loop runs).
             demo.execute();
         } catch (Exception e) {
+            // Any startup failure (e.g. missing hardware, bus busy) lands here.
             e.printStackTrace();
             System.exit(1);
         }

@@ -95,17 +95,17 @@ only **one** of these JVMs may run against a Pi at a time.
 | Hardware | Connection | Default the demos assume |
 |---|---|---|
 | Grove I²C devices (LCD, LED matrix, gesture, accelerometer) | GrovePi I²C port | bus `/dev/i2c-1`; fixed per-device I²C addresses |
-| Grove chainable RGB LED | GrovePi digital port | GPIO line `led.line` = **26** (`paradigmshift.config`) |
+| Grove chainable RGB LED | GrovePi digital port | GPIO line `led.line` = **24** (`paradigmshift.config`) |
 | Grove rotary encoder / digital devices | GrovePi digital port | line set per demo |
 | Waveshare SX126X LoRa HAT | seated on the 40-pin header (UART + M0/M1 pins) | UART `lora.device` = `/dev/ttyAMA0`, address `lora.own.addr` = `0x0001` |
 | Ember EZSP ZigBee dongle | any USB port | `zigbee.serial.port` empty → auto-discovered |
 
-> ⚠️ The chainable-RGB demos default to GPIO line **26**. If you ever run a LoRa
-> demo and a chainable-LED demo on the same Pi, move the LED off `D26`: the
-> chainable LED's data pin is `line + 1` = BCM 27, which is the LoRa HAT's M1
-> mode pin (the HAT also owns BCM 22 = M0) — the clash shows up as a Pi4J
-> `Device or resource busy`. Set `led.line` to a free port (the StoneFlux
-> gateway uses `D24`).
+> ⚠️ The chainable-RGB demos default to GPIO line **24** (BCM 24 clock + BCM 25
+> data), chosen so the demo coexists with a seated LoRa HAT. **Do not use line
+> `26`:** the chainable LED's data pin is `line + 1` = BCM 27, which is the LoRa
+> HAT's M1 mode pin (the HAT also owns BCM 22 = M0) — the clash shows up as a
+> Pi4J `Device or resource busy`. (This matches the StoneFlux gateway, which
+> also uses `D24`.)
 
 ---
 
@@ -383,14 +383,14 @@ register-then-drive pattern in full.
 | `cardinalGesture` | Colours the matrix by the cardinal gesture (UP/DOWN/LEFT/RIGHT) | Grove gesture detector + LED matrix (I²C) |
 | `arrowGesture` | Shows an arrow on the matrix matching the gesture | Grove gesture detector + LED matrix (I²C) |
 | `encoderMatrix` | Drives the matrix from the rotary encoder | Grove rotary encoder + LED matrix |
-| `ledsRGB` | Chainable RGB LEDs cycling random colours (RGB model) | Grove chainable RGB LED (D26) |
-| `ledsHSB` | Chainable RGB LEDs cycling random colours (HSB model) | Grove chainable RGB LED (D26) |
-| `simpleLedsRGB` | Minimal chainable-LED RGB control | Grove chainable RGB LED (D26) |
-| `simpleLedsHSB` | Minimal chainable-LED HSB control | Grove chainable RGB LED (D26) |
+| `ledsRGB` | Chainable RGB LEDs cycling random colours (RGB model) | Grove chainable RGB LED (D24) |
+| `ledsHSB` | Chainable RGB LEDs cycling random colours (HSB model) | Grove chainable RGB LED (D24) |
+| `simpleLedsRGB` | Minimal chainable-LED RGB control | Grove chainable RGB LED (D24) |
+| `simpleLedsHSB` | Minimal chainable-LED HSB control | Grove chainable RGB LED (D24) |
 | `lightControl` | Gesture-controlled lights: RGB chain + gesture detector + matrix + LCD | All of the above |
 
 The chainable-RGB demos read the strip length from `rgb.led.count` and the GPIO
-line from `led.line` (default `26`) in `paradigmshift.config`.
+line from `led.line` (default `24`) in `paradigmshift.config`.
 
 ---
 
