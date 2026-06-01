@@ -5,7 +5,7 @@
 
 	<groupId>pt.paradigmshift.iot</groupId>
 	<artifactId>babel-raspberry-iot-examples</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1</version>
 	<name>ParadigmShift Babel IoT Examples for Raspberry Pi</name>
 
 	<description>
